@@ -1,0 +1,77 @@
+# filebeat.config:
+#   modules:
+#     path: ${path.config}/modules.d/*.yml
+#     reload.enabled: false
+
+filebeat.modules:
+- module: system
+
+# filebeat.inputs:
+# - type: log
+#   paths:
+#     - /var/log/**
+#   exclude_files: ['\.gz$']
+#   ignore_older: 7d
+#   tags: ["linux", "logfiles", ]
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      host: "tcp://docker-socket-proxy:2375"
+      # json.message_key: log  
+      # templates:
+      #   - condition:
+      #       equals:
+      #         docker.container.labels.filebeat_enable: "true"
+      #     config:
+      #       - type: docker
+      #         containers.ids:
+      #           - "${data.docker.container.id}"
+      #         json.keys_under_root: true
+      #         json.add_error_key: false
+      #   - condition:
+      #       contains:
+      #         docker.container.image: redis
+      #     config:
+      #       - type: container
+      #         paths:
+      #           - /var/lib/docker/containers/${data.docker.container.id}/*.log
+      #         exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+
+processors:
+- add_cloud_metadata: ~
+- add_host_metadata: ~
+- add_docker_metadata:
+    # https://www.elastic.co/guide/en/beats/filebeat/master/add-docker-metadata.html
+    #host: "unix:///var/run/docker.sock"
+    host: "tcp://docker-socket-proxy:2375"
+    #match_fields: ["system.process.cgroup.id"]
+    #match_pids: ["process.pid", "process.ppid"]
+    #match_source: true
+    #match_source_index: 4
+    #match_short_id: true
+    #cleanup_timeout: 60
+    #labels.dedot: false
+    # To connect to Docker over TLS you must specify a client and CA certificate.
+    #ssl:
+    #  certificate_authority: "/etc/pki/root/ca.pem"
+    #  certificate:           "/etc/pki/client/cert.pem"
+    #  key:                   "/etc/pki/client/cert.key"
+
+output.file:
+  # https://www.elastic.co/guide/en/beats/filebeat/current/file-output.html
+  path: "/var/log/filebeat"
+  #filename: "filebeat.log"
+  #rotate_every_kb: 10000
+  number_of_files: 14
+  permissions: 0600
+
+# output.console:
+#   # https://www.elastic.co/guide/en/beats/filebeat/current/console-output.html
+#   pretty: true
+
+# output.logstash:
+#   # https://www.elastic.co/guide/en/beats/filebeat/current/logstash-output.html
+#   # https://www.elastic.co/guide/en/beats/filebeat/current/using-environ-vars.html
+#   hosts: '${LOGSTASH_HOSTS:?Please add at least one logstash host+port as env var LOGSTASH_HOSTS=yourhost:5044,yourhost:5045}'
