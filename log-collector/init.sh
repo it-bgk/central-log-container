@@ -1,5 +1,5 @@
 #!/bin/sh
-set -v
+set -x
 
 BASE="/opt/central-log-container"
 DATA_STORE="/data"
