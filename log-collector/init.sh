@@ -7,7 +7,9 @@ DATA_STORE="/data"
 func_debian(){
     echo "Update System" && sleep 2 && apt update 
     echo "Upgrade System" && sleep 2 && apt upgrade -y
-    echo "Install Dependencies" && sleep 2 && apt install -y screen sudo cron-apt rsyslog git wget apt-transport-https gnupg2 net-tools htop lsof
+    echo "Install Dependencies" && sleep 2 && apt install -y screen sudo cron-apt rsyslog git wget apt-transport-https gnupg2 net-tools htop lsof msmtp
+    # if this is a LXC container:
+    [ -e /dev/.lxc-boot-id ] && echo "Remove unused dependencies" && sleep 2 && apt purge postfix ssh && apt autoremove
     # Beats for own system monitoring:
     echo "Install [File|Audit]beat for system monitoring "
     sudo wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
