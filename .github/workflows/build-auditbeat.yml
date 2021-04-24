@@ -1,4 +1,4 @@
-name: Build Filebeat Docker Container
+name: Build Auditbeat Docker Container
 on: 
   release:
     # Only use the types keyword to narrow down the activity types that will trigger your workflow.
@@ -22,7 +22,7 @@ jobs:
         CONFIG: [console,file,logstash]
     runs-on: ubuntu-latest
     env:
-      CONFIG_FILE: filebeat_config_${{matrix.CONFIG}}.yml
+      CONFIG_FILE: auditbeat_config_${{matrix.CONFIG}}.yml
     steps:
       - uses: actions/checkout@v2
       - name: Output git ref sha1
