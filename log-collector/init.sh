@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+set -v
 
 BASE="/opt/central-log-container"
 DATA_STORE="/data"
@@ -34,7 +34,7 @@ func_centos(){
 
 func_for_all() {
     [ ! -f ~/.ssh/id_ecdsa ] && echo "Create SSH-Keygen for Git" && sleep 2 && ssh-keygen -t ecdsa
-    [ ! -d "$BASE" ] && echo "Clone Git repo" && sleep 2 && git clone git@github.com:it-bgk/central-log-container.git "$BASE"
+    [ ! -d "$BASE" ] && echo "Clone Git repo" && sleep 2 && git clone https://github.com/it-bgk/central-log-container.git "$BASE"
     echo "Copy rsyslog config" && sleep 2 && cp "$BASE/log-collector/rsyslog.conf" "/etc/rsyslog.d/central-log-container.conf"
     echo "Copy Filebeat config" && sleep 2 && cp "$BASE/filebeat/filebeat_config_file.yml" "/etc/filebeat/filebeat.conf"
     echo "Copy Auditbeat config" && sleep 2 && cp "$BASE/auditbeat/auditbeat_config_file.yml" "/etc/auditbeat/auditbeat.conf"
