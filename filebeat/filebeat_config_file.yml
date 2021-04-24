@@ -63,7 +63,7 @@ output.file:
   # https://www.elastic.co/guide/en/beats/filebeat/current/file-output.html
   path: "/var/log/filebeat"
   #filename: "filebeat.log"
-  #rotate_every_kb: 10000
+  rotate_every_kb: 1000000
   number_of_files: 14
   permissions: 0600
 
