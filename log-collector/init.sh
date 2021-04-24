@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+[ "$1" = "-debug" ] && set -x
 
 BASE="/opt/central-log-container"
 DATA_STORE="/data"
@@ -38,8 +38,8 @@ func_for_all() {
     echo "Copy rsyslog config" && sleep 2 && cp "$BASE/log-collector/rsyslog.conf" "/etc/rsyslog.d/central-log-container.conf"
     echo "Copy Filebeat config" && sleep 2 && cp "$BASE/filebeat/filebeat_config_file.yml" "/etc/filebeat/filebeat.conf"
     echo "Copy Auditbeat config" && sleep 2 && cp "$BASE/auditbeat/auditbeat_config_file.yml" "/etc/auditbeat/auditbeat.conf"
-    [ ! -L /var/log/filebeat ] && echo "Make symbolic link for filebeat" && sleep 2 && mkdir "$DATA_STORE/filebeat" && ln -s "$DATA_STORE/filebeat" /var/log/filebeat
-    [ ! -L /var/log/auditbeat ] && echo "Make symbolic link for auditbeat" && sleep 2 && mkdir "$DATA_STORE/auditbeat" && ln -s "$DATA_STORE/auditbeat" /var/log/auditbeat
+    [ ! -e /var/log/filebeat ] && echo "Make symbolic link for filebeat" && sleep 2 && mkdir "$DATA_STORE/filebeat" && ln -s "$DATA_STORE/filebeat" /var/log/filebeat
+    [ ! -e /var/log/auditbeat ] && echo "Make symbolic link for auditbeat" && sleep 2 && mkdir "$DATA_STORE/auditbeat" && ln -s "$DATA_STORE/auditbeat" /var/log/auditbeat
 }
 
 ### MAIN ###
