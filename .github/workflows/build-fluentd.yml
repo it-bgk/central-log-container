@@ -1,0 +1,106 @@
+name: Build fluentd Docker Container
+on: 
+  release:
+    # Only use the types keyword to narrow down the activity types that will trigger your workflow.
+    types: [published, created, edited, prereleased]
+  schedule:
+    - cron:  '0 0 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+env:
+  MY_DOCKER_REPO: ${{ secrets.DOCKERHUB_ORG }}/fluentd
+  MY_QUAY_REPO: quay.io/${{ secrets.QUAY_ORG }}/fluentd
+  MY_DOCKER_CONTEXT: ./fluentd
+  MY_DOCKER_DOCKERFILE: Dockerfile
+jobs:
+  main:
+    strategy:
+      matrix:
+        VERSION: [edge-debian]
+    runs-on: ubuntu-latest
+    env:
+      CONFIG_FILE: fluent.conf
+    steps:
+      - uses: actions/checkout@v2
+      - name: Output git ref sha1
+        id: git-sha
+        run: echo "EXT_GIT_REF_SHA1=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Setup Docker metadata for dev
+        id: meta
+        # https://github.com/crazy-max/ghaction-docker-meta
+        uses: crazy-max/ghaction-docker-meta@v2
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ${{env.MY_DOCKER_REPO}}
+            ${{env.MY_QUAY_REPO}}
+          flavor: |
+            latest=false
+            prefix=dev-
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=raw,value=${{matrix.VERSION}}
+            type=raw,value=${{matrix.VERSION}}-${{env.EXT_GIT_REF_SHA1}}
+
+      - name: Setup Docker metadata for prod
+        id: metaprod
+        uses: crazy-max/ghaction-docker-meta@v2
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ${{env.MY_DOCKER_REPO}}
+            ${{env.MY_QUAY_REPO}}
+          flavor: |
+            latest=auto
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=semver,suffix=-${{matrix.VERSION}},pattern={{version}}
+            type=raw,value=${{matrix.VERSION}}
+            type=raw,value=latest
+            type=raw,value=${{matrix.VERSION}}-${{env.EXT_GIT_REF_SHA1}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: hub.docker.com login
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || github.ref == 'refs/tags' }}
+      - name: quay.io login
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || github.ref == 'refs/tags' }}
+
+      - name: Build dev docker container and push it as dev container if it is part of a pull_request
+        uses: docker/build-push-action@v2
+        with:
+          context: filebeat/
+          push: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' }}
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{matrix.VERSION}}
+            CONFIG_FILE=${{env.CONFIG_FILE}}
+      
+      - name: Build docker container and push it as container if it is part of a pull_request
+        uses: docker/build-push-action@v2
+        with:
+          context: filebeat/
+          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/tags' }}
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.metaprod.outputs.tags }}
+          labels: ${{ steps.metaprod.outputs.labels }}
+          build-args: |
+            VERSION=${{matrix.VERSION}}
+            CONFIG_FILE=${{env.CONFIG_FILE}}

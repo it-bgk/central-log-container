@@ -1,0 +1,15 @@
+version: '2.4'
+
+services:
+  ### fluentd  ###
+  fluentd:
+    image: quay.io/itbgk/fluentd:edge-debian
+    container_name: central-fluentd
+    hostname: ${FQDN:-${HOSTNAME}}
+    restart: unless-stopped
+    volumes:
+    - /var/log/syslog:/var/log/syslog:ro
+    - /data/fluent:/data/fluent
+    mem_limit: 32M
+    group_add:
+    - adm
