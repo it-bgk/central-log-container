@@ -7,7 +7,7 @@ DATA_STORE="/data"
 func_debian(){
     echo "Update System" && sleep 2 && apt update 
     echo "Upgrade System" && sleep 2 && apt upgrade -y
-    echo "Install Dependencies" && sleep 2 && apt install -y screen sudo cron-apt rsyslog git wget apt-transport-https gnupg2 net-tools htop lsof msmtp
+    echo "Install Dependencies" && sleep 2 && apt install -y screen sudo cron-apt git curl net-tools htop lsof msmtp
     # if this is a LXC container:
     [ -e /dev/.lxc-boot-id ] && echo "Remove unused dependencies" && sleep 2 && apt remove -y postfix ssh && apt autoremove
     # # Beats for own system monitoring:
@@ -22,9 +22,8 @@ func_debian(){
     # sudo apt install filebeat
     # sudo systemctl enable filebeat
 
+    # Install Fluentd Agent
     curl -L https://toolbelt.treasuredata.com/sh/install-debian-buster-td-agent4.sh | sh
-
-
     func_for_all
 }
 
@@ -36,24 +35,34 @@ func_centos(){
     echo "Not implemented at the moment, please do it manually."
 }
 
-func_raspberrypios(){
-    curl https://packages.fluentbit.io/fluentbit.key | sudo apt-key add -
-    deb https://packages.fluentbit.io/raspbian/buster buster main
-    sudo apt-get update
-    sudo apt-get install td-agent-bit
-    sudo service td-agent-bit start
-    sudo service td-agent-bit enable   
+func_raspbian(){
+    # curl https://packages.fluentbit.io/fluentbit.key | sudo apt-key add -
+    # deb https://packages.fluentbit.io/raspbian/buster buster main
+    # sudo apt-get update
+    # sudo apt-get install td-agent-bit
+    # sudo service td-agent-bit start
+    # sudo service td-agent-bit enable   
+    func_debian
 }
 
 func_for_all() {
     [ ! -f ~/.ssh/id_ecdsa ] && echo "Create SSH-Keygen for Git" && sleep 2 && ssh-keygen -t ecdsa
     [ ! -d "$BASE" ] && echo "Clone Git repo" && sleep 2 && git clone https://github.com/it-bgk/central-log-container.git "$BASE"
+    
+    # Rsyslog
     #echo "Copy rsyslog config" && sleep 2 && cp "$BASE/log-collector/rsyslog.conf" "/etc/rsyslog.d/central-log-container.conf"
-    #echo "Copy Filebeat config" && sleep 2 && cp "$BASE/filebeat/filebeat_config_file.yml" "/etc/filebeat/filebeat.conf"
-    echo "Copy Auditbeat config" && sleep 2 && cp "$BASE/auditbeat/auditbeat_config_file.yml" "/etc/auditbeat/auditbeat.conf"
-    #[ ! -e /var/log/filebeat ] && echo "Make symbolic link for filebeat" && sleep 2 && mkdir "$DATA_STORE/filebeat" && ln -s "$DATA_STORE/filebeat" /var/log/filebeat
-    [ ! -e /var/log/auditbeat ] && echo "Make symbolic link for auditbeat" && sleep 2 && mkdir "$DATA_STORE/auditbeat" && ln -s "$DATA_STORE/auditbeat" /var/log/auditbeat
     #[ ! -e /var/log/syslog-hosts ] && echo "Make symbolic link for syslog-hosts" && sleep 2 && mkdir "$DATA_STORE/syslog-hosts" && ln -s "$DATA_STORE/syslog-hosts" /var/log/syslog-hosts
+    
+    # Fluentd
+    [ -e /etc/td-agent/td-agent.conf ] && echo "Copy Fluentd config" && sleep 2 && cp "$BASE/fluentd/fluent.conf" "/etc/td-agent/td-agent.conf"
+    
+    # Filebeat
+    #echo "Copy Filebeat config" && sleep 2 && cp "$BASE/filebeat/filebeat_config_file.yml" "/etc/filebeat/filebeat.conf"
+    #[ ! -e /var/log/filebeat ] && echo "Make symbolic link for filebeat" && sleep 2 && mkdir "$DATA_STORE/filebeat" && ln -s "$DATA_STORE/filebeat" /var/log/filebeat
+    
+    # Auditbeat
+    echo "Copy Auditbeat config" && sleep 2 && cp "$BASE/auditbeat/auditbeat_config_file.yml" "/etc/auditbeat/auditbeat.conf"
+    [ ! -e /var/log/auditbeat ] && echo "Make symbolic link for auditbeat" && sleep 2 && mkdir "$DATA_STORE/auditbeat" && ln -s "$DATA_STORE/auditbeat" /var/log/auditbeat
     
     #https://docs.fluentd.org/installation/before-install
     # If your console shows 1024, it is insufficient. Please add the following lines to your /etc/security/limits.conf file and reboot your machine:
@@ -92,9 +101,10 @@ case "$(grep ^ID= /etc/os-release|cut -d = -f 2)" in
         echo "OS: CentOS, detected."
         echo
         ;;
-    raspberryos)
+    raspbian)
         echo "OS: RaspberryPi OS, detected"
         echo
+        func_raspbian
         ;;
     *)
         echo "Sorry I cannot detect your OS. Please make the steps manual."
