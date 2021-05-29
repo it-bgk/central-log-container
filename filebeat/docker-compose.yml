@@ -41,6 +41,6 @@ services:
     - /var/log/filebeat:/var/log/filebeat
     extra_hosts: 
       - "docker-socket-proxy:${DOCKER_PROXY_IP_SUBNET:-192.168.240}.2"
-    mem_limit: 32M
+    mem_limit: 64M
     group_add:
     - adm
