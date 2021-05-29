@@ -1,0 +1,50 @@
+version: '2.4'
+
+networks: 
+  docker_proxy_internal:
+    name: docker_proxy_internal
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: "${DOCKER_PROXY_IP_SUBNET:-192.168.240}.0/24"
+    driver_opts:
+      com.docker.network.bridge.name: docker-proxy0
+
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CONTAINERS=10
+      - INFO=1
+    networks:
+      docker_proxy_internal:
+        ipv4_address: "${DOCKER_PROXY_IP_SUBNET:-192.168.240}.2"
+    runtime: runc
+    mem_limit: 32M
+  ### Auditbeat  ###
+  auditbeat:
+    image: quay.io/itbgk/auditbeat:7.12.0-file
+    container_name: central-auditbeat
+    hostname: ${FQDN:-${HOSTNAME}}
+    restart: unless-stopped
+    networks:
+      docker_proxy_internal:
+        ipv4_address: "${DOCKER_PROXY_IP_SUBNET:-192.168.240}.3"
+      default:
+    volumes:
+    - /var/lib/docker/containers/:/var/lib/docker/containers:ro
+    - /var/log:/var/log:ro
+    - /var/log/filebeat:/var/log/filebeat
+    extra_hosts: 
+      - "docker-socket-proxy:${DOCKER_PROXY_IP_SUBNET:-192.168.240}.2"
+    mem_limit: 64M
+    cap_add: 
+    - AUDIT_CONTROL
+    - AUDIT_READ
+    pid: host
+    group_add:
+    - adm
